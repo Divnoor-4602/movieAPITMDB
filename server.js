@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 import app from "./app/index.js";
 import Axios from "axios";
-import axios from "axios";
 
 dotenv.config();
 // bearer authorization token
@@ -106,7 +105,7 @@ async function showDetails(showsData) {
     const showName = show.name;
 
     // show id
-    const showId = show.name;
+    const showId = show.id;
 
     // show description
     const showDesc = show.overview;
