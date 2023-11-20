@@ -15,7 +15,7 @@ const movieUrl = "https://api.themoviedb.org/3/movie/now_playing";
 const movieParams = {
   language: "en-US",
   page: 1,
-  region: "IN",
+  region: "US",
 };
 
 const headers = {
@@ -24,15 +24,59 @@ const headers = {
 };
 
 // setting up show get req params and header
-const showsUrl = "https://api.themoviedb.org/3/tv/on_the_air";
+const showsUrl = "https://api.themoviedb.org/3/tv/top_rated";
 
 const showParams = {
   language: "en-US",
   page: 1,
 };
 
-/***
- * Gets the genre names of the given movie
+// youtube uri to retrieve the trailer of the movies and pass them onto the json object
+const youtubeUrl = "https://www.youtube.com/watch?v=";
+
+/**
+ *
+ * @param {*} movies: takes in a movie list from the movies extractor
+ * @return {*}
+ */
+async function getVideosProviders(movies, type) {
+  const newMovieObject = [];
+
+  for (const movie of movies) {
+    //  getting the id of the movie
+
+    // Getting the videos for the trailers
+    let videosEndpoint = "";
+    if (type == "movie") {
+      const movieId = movie.movie_id;
+      videosEndpoint = `https://api.themoviedb.org/3/movie/${movieId}/videos`;
+    } else {
+      const showId = movie.show_id;
+      videosEndpoint = `https://api.themoviedb.org/3/tv/${showId}/videos`;
+    }
+    // making an axios request to get movie results JSON
+    const movieResponse = await Axios.get(videosEndpoint, { headers });
+
+    for (const videoResponse of movieResponse.data["results"]) {
+      if (videoResponse.type == "Trailer" && videoResponse.site == "YouTube") {
+        let youtubeUrlToPass = youtubeUrl + videoResponse.key;
+        if (type == "movie") {
+          movie["movie_youtube_url"] = youtubeUrlToPass;
+        } else {
+          movie["show_youtube_url"] = youtubeUrlToPass;
+        }
+      }
+    }
+    newMovieObject.push(movie);
+  }
+  return newMovieObject;
+}
+
+/**
+ *
+ * Takes the movie list and returns the genre
+ * @param {*} movieToExtract
+ * @return {*}
  */
 function genreExtract(movieToExtract) {
   let [genre1, genre2] = movieToExtract.genre_ids;
@@ -76,6 +120,15 @@ async function movieDetails(moviesData) {
     //   movie poster
     const moviePoster = movie.poster_path;
 
+    // vote avergae ratings
+    const movieRatings = movie.vote_average;
+
+    // getting the release data
+    const movieReleaseDate = movie.release_date;
+
+    // getting the orignal language
+    const movieLang = movie.orignal_language;
+
     const movieObj = {
       movie_title: movieTitle,
       genre_1: genreTitle1,
@@ -83,12 +136,17 @@ async function movieDetails(moviesData) {
       movie_id: movieId,
       movie_poster_path: moviePoster,
       movie_desc: movieDescription,
+      movie_ratings: movieRatings,
+      movie_release_date: movieReleaseDate,
+      movie_language: movieLang,
     };
 
     moviesListToSend.push(movieObj);
   });
 
-  return { movies: moviesListToSend };
+  const movieObjectToSend = await getVideosProviders(moviesListToSend, "movie");
+
+  return { movies: movieObjectToSend };
 }
 
 /***
@@ -112,6 +170,12 @@ async function showDetails(showsData) {
 
     const showPoster = show.poster_path;
 
+    // show ratings
+    const showRatings = show.vote_average;
+
+    // show release date
+    const showReleaseDate = show.first_air_date;
+
     const showobj = {
       show_title: showName,
       genre_1: genreName1,
@@ -119,10 +183,17 @@ async function showDetails(showsData) {
       show_id: showId,
       show_poster_path: showPoster,
       show_desc: showDesc,
+      show_ratings: showRatings,
+      release_date: showReleaseDate,
     };
     showsToSend.push(showobj);
   });
-  return { shows: showsToSend };
+
+  // todo: get show videos, ratings, release dat, video
+
+  const newShowObject = await getVideosProviders(showsToSend);
+
+  return { shows: newShowObject };
 }
 
 // listening on port
@@ -145,6 +216,9 @@ app.get("/currentMovies", async (req, res) => {
 
     // extracting details
     const movieDetailsToSend = await movieDetails(movieResponse.data);
+
+    //  extracting youtube video links
+
     res.json(movieDetailsToSend);
   } catch (error) {
     console.log(error);
@@ -158,6 +232,8 @@ app.get("/currentShows", async (req, res) => {
 
     // extracting show details
     const showDetailsToSend = await showDetails(showResponse.data);
+
+    // getting the youtube video links
 
     res.json(showDetailsToSend);
   } catch (error) {
