@@ -14,7 +14,7 @@ const movieUrl = "https://api.themoviedb.org/3/movie/now_playing";
 
 const movieParams = {
   language: "en-US",
-  page: 1,
+  page: 2,
   region: "US",
 };
 
@@ -28,7 +28,7 @@ const showsUrl = "https://api.themoviedb.org/3/tv/top_rated";
 
 const showParams = {
   language: "en-US",
-  page: 1,
+  page: 2,
 };
 
 // youtube uri to retrieve the trailer of the movies and pass them onto the json object
